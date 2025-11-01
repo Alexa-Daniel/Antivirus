@@ -25,7 +25,7 @@ void loadBloomFilter(BloomFilter& bf)
 	}
 	else
 	{
-		cerr << "[ERROR]: Could not load bloom_filter.bin!\n";
+		//cerr << "[ERROR]: Could not load bloom_filter.bin!\n";
 	}
 }
 
@@ -39,13 +39,13 @@ vector<uint8_t> createHash(const filesystem::path& file, string& bucketName)
 
 	if (!CryptAcquireContext(&hProv, NULL, NULL, PROV_RSA_AES, CRYPT_VERIFYCONTEXT))
 	{
-		cerr << "[ERROR]: CryptAcquireContext failed\n";
+		//cerr << "[ERROR]: CryptAcquireContext failed\n";
 		return binaryHash;
 	}
 
 	if (!CryptCreateHash(hProv, CALG_SHA_256, 0, 0, &hHash))
 	{
-		cerr << "[ERROR]: CryptCreateHash failed\n";
+		//cerr << "[ERROR]: CryptCreateHash failed\n";
 		CryptReleaseContext(hProv, 0);
 		return binaryHash;
 	}
@@ -53,7 +53,7 @@ vector<uint8_t> createHash(const filesystem::path& file, string& bucketName)
 	hFile = CreateFileW(file.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_SEQUENTIAL_SCAN, NULL);
 	if (hFile == INVALID_HANDLE_VALUE)
 	{
-		cerr << "[ERROR]: CreateFileW failed: " << GetLastError() << "\n";
+		//cerr << "[ERROR]: CreateFileW failed: " << GetLastError() << "\n";
 		CryptDestroyHash(hHash);
 		CryptReleaseContext(hProv, 0);
 		return binaryHash;
@@ -71,7 +71,7 @@ vector<uint8_t> createHash(const filesystem::path& file, string& bucketName)
 
 		if (!CryptHashData(hHash, rgbFile, cbRead, 0))
 		{
-			cerr << "[ERROR]: CryptoHashData failed: " << GetLastError() << '\n';
+			//cerr << "[ERROR]: CryptoHashData failed: " << GetLastError() << '\n';
 			CloseHandle(hFile);
 			CryptDestroyHash(hHash);
 			CryptReleaseContext(hProv, 0);
@@ -83,7 +83,7 @@ vector<uint8_t> createHash(const filesystem::path& file, string& bucketName)
 	BYTE rgbHash[32];
 	if (!CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, &cbHash, 0))
 	{
-		cerr << "[ERROR] CryptGetHashParam failed: " << GetLastError() << '\n';
+		//cerr << "[ERROR] CryptGetHashParam failed: " << GetLastError() << '\n';
 		CloseHandle(hFile);
 		CryptDestroyHash(hHash);
 		CryptReleaseContext(hProv, 0);
@@ -114,7 +114,7 @@ bool checkHash(string bucketName, vector<uint8_t> fileHash)
 
 	if (!hashesFile.is_open())
 	{
-		cout << "Couldn't open the file containing the corresponding hashes\n";
+		//cout << "Couldn't open the file containing the corresponding hashes\n";
 		return false;
 	}
 
@@ -125,13 +125,13 @@ bool checkHash(string bucketName, vector<uint8_t> fileHash)
 	}
 	catch (filesystem::filesystem_error e)
 	{
-		cout << e.what();
+		//cout << e.what();
 		return false;
 	}
 
 	if (hashesFileLg == 0 || hashesFileLg % BIN_HASH_SIZE)
 	{
-		cout << "There were no hashes found in the corresponding file, or the file is corrupted\n";
+		//cout << "There were no hashes found in the corresponding file, or the file is corrupted\n";
 		return false;
 	}
 
@@ -141,7 +141,7 @@ bool checkHash(string bucketName, vector<uint8_t> fileHash)
 
 	if (!hashesFile.read(reinterpret_cast<char*>(hashes.data()), hashesFileLg))
 	{
-		cout << "Couldn't read from the file with the corresponding hashes\n";
+		//cout << "Couldn't read from the file with the corresponding hashes\n";
 		return false;
 	}
 
@@ -155,7 +155,7 @@ bool checkHash(string bucketName, vector<uint8_t> fileHash)
 		}
 	}
 
-	cout << "Didn't find the file hash in the corresponding hashes\n";
+	//cout << "Didn't find the file hash in the corresponding hashes\n";
 	return false;
 }
 
@@ -177,16 +177,16 @@ void passFiles(string path, set<string>& extensions, BloomFilter& bf)
 
 					if (!bf.check(fileHash.data(), fileHash.size()))
 					{
-						cout << "File: " << entry.path() << ": Not malware - from Bloom Filter\n";
+						//cout << "File: " << entry.path() << ": Not malware - from Bloom Filter\n";
 						continue;
 					}
 					if (!fileHash.empty())
 					{
-						cout << "File: " << entry.path() << ": ";
+						//cout << "File: " << entry.path() << ": ";
 						bool malw = checkHash(bucketName, fileHash);
 						if (malw)
 						{
-							cout << "Malware found: " << "\n";
+							//cout << "Malware found: " << "\n";
 						}
 					}
 					//ifstream bucket(bucketName, ios::binary | ios::ate);
@@ -198,20 +198,20 @@ void passFiles(string path, set<string>& extensions, BloomFilter& bf)
 	}
 	catch (filesystem::filesystem_error& e)
 	{
-		cerr << "[ERROR]: " << e.what() << '\n';
+		//cerr << "[ERROR]: " << e.what() << '\n';
 	}
 	catch (exception& e)
 	{
-		cerr << "[ERROR]: Didn't receive a valid path\n";
+		//cerr << "[ERROR]: Didn't receive a valid path\n";
 	}
 }
 
-int main()
-{
-	string path = "D:\\Test";
-	set<string> extensions = { ".exe", ".dll", ".js", ".msi", ".bat", ".cmd", ".vbs", ".scr", ".vbs", ".ps1", ".docm", ".xlsm", ".pptm" };
-	BloomFilter bf;
-	loadBloomFilter(bf);
-	//set<string> hashes = loadHashes(path);
-	passFiles(path, extensions, bf);
-}
+//int main()
+//{
+//	string path = "D:\\Test";
+//	set<string> extensions = { ".exe", ".dll", ".js", ".msi", ".bat", ".cmd", ".vbs", ".scr", ".vbs", ".ps1", ".docm", ".xlsm", ".pptm" };
+//	BloomFilter bf;
+//	loadBloomFilter(bf);
+//	//set<string> hashes = loadHashes(path);
+//	passFiles(path, extensions, bf);
+//}
