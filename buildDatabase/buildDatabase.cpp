@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 #include <filesystem>
-#include "BloomFilter.hpp"
+#include "..\\Include\\BloomFilter.hpp"
 
 using namespace std;
 

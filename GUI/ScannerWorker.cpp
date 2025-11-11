@@ -1,6 +1,7 @@
 #include <QObject>
 #include <QString>
 #include <QElapsedTimer>
+#include <QTime>
 #include <set>
 #include <string>
 #include <filesystem>
@@ -18,23 +19,27 @@ void ScannerWorker::scan(QString path, set<string>& extensions, BloomFilter& bf)
 	emit addToLog(QString("Started scanning: %1").arg(path));
 	//emit addToHistory(path);
 
+	initializeTrie();
+
 	string string_path = path.toStdString();
 	filesystem::path fs_path(string_path);
 
-	int filesChecked = 0;
-	QElapsedTimer timer;
+	filesScanned = 0;
+	malwareFound = 0;
 	timer.start();
+	updateTimer.start();
 
 	try
 	{
-		for (const filesystem::directory_entry& entry : filesystem::recursive_directory_iterator(fs_path))
+		filesystem::directory_options ops = filesystem::directory_options::skip_permission_denied;
+		for (const filesystem::directory_entry& entry : filesystem::recursive_directory_iterator(fs_path, ops))
 		{
-			filesChecked++;
+			filesScanned++;
 
-			if (timer.elapsed() > 500)
+			if (updateTimer.elapsed() > 500)
 			{
-				emit addToLog(QString("Scanned %1 files").arg(filesChecked));
-				timer.restart();
+				emit addToLog(QString("Scanned %1 files").arg(filesScanned));
+				updateTimer.restart();
 			}
 			try
 			{
@@ -58,20 +63,22 @@ void ScannerWorker::scan(QString path, set<string>& extensions, BloomFilter& bf)
 
 						if (!bf.check(fileHash.data(), fileHash.size()))
 						{
+							int score = getHeuristicScore(entry.path());
+							//emit addToLog(QString("Score: %1 for file %2").arg(score).arg(QString::fromStdString(entry.path().generic_string())));
+							if (score >= 100)
+							{
+								malwareFound++;
+								emit foundMalware(QString("[Heuristic]: %1 (Score: %2)").arg(QString::fromStdString(entry.path().generic_string())).arg(score));
+							}
 							//cout << "File: " << entry.path() << ": Not malware - from Bloom Filter\n";
 							//emit addToLog(QString("[Clean]: Not malware (Bloom Filter check)"));
 							continue;
 						}
-						if (!fileHash.empty())
+						if (checkHash(bucketName, fileHash))
 						{
-							emit addToLog(QString("[Checking]: %1").arg(QString::fromStdString(entry.path().generic_string())));
-							//cout << "File: " << entry.path() << ": ";
-							if (checkHash(bucketName, fileHash))
-							{
-								//threatsFound++;
-								emit foundMalware(QString("[WARNING]: Malware found from SHA256 check"));
-								//cout << "Malware found: " << "\n";
-							}
+							malwareFound++;
+							emit foundMalware(QString("[Signature - SHA256]: %1").arg(QString::fromStdString(entry.path().generic_string())));
+							//cout << "Malware found: " << "\n";
 						}
 						//ifstream bucket(bucketName, ios::binary | ios::ate);
 
@@ -91,7 +98,14 @@ void ScannerWorker::scan(QString path, set<string>& extensions, BloomFilter& bf)
 		//cerr << "[ERROR]: Didn't receive a valid path\n";
 	}
 
-	emit addToLog(QString("Scanned %1 files.").arg(filesChecked));
+	qint64 timeInMs = timer.elapsed();
+	QTime time(0, 0, 0);
+	time = time.addMSecs(timeInMs);
+	QString formattedTime = time.toString("hh:mm:ss");
+	emit addToLog(QString("Scanned %1 files. Found %2 threats. Time taken: %3")
+		.arg(filesScanned)
+		.arg(malwareFound)
+		.arg(formattedTime));
 	emit addToLog(QString("Finished the scan"));
 	emit finishedScan();
 }

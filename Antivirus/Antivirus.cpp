@@ -7,12 +7,17 @@
 #include <wincrypt.h>
 #include <sstream>
 #include <iomanip>
+#include <wintrust.h>
+#include <SoftPub.h>
 #include "BloomFilter.hpp"
+#include "Aho-Corasick.hpp"
 
 #pragma comment(lib, "advapi32.lib")
+#pragma comment(lib, "wintrust.lib")
 
 using namespace std;
 
+TrieNode* trie = nullptr;
 const unsigned int BIN_HASH_SIZE = 32;
 
 void loadBloomFilter(BloomFilter& bf)
@@ -206,12 +211,91 @@ void passFiles(string path, set<string>& extensions, BloomFilter& bf)
 	}
 }
 
-//int main()
-//{
-//	string path = "D:\\Test";
-//	set<string> extensions = { ".exe", ".dll", ".js", ".msi", ".bat", ".cmd", ".vbs", ".scr", ".vbs", ".ps1", ".docm", ".xlsm", ".pptm" };
-//	BloomFilter bf;
-//	loadBloomFilter(bf);
-//	//set<string> hashes = loadHashes(path);
-//	passFiles(path, extensions, bf);
-//}
+void initializeTrie()
+{
+	if (trie != nullptr)
+	{
+		return;
+	}
+	trie = new TrieNode();
+	vector<string> checkWords = { "CreateRemoteThread", "WriteProcessMemory", "VirtualAllocEx", "QueueUserAPC",
+								 "NtQueueApcThread", "SetWindowsHookEx", "GetAsyncKeyState", "GetForegroundWindow",
+								 "LsaGetLogonSessionData", "CryptUnprotectData", "sqlite3_open", "LSASS", "Software\Microsoft\Windows\CurrentVersion\Run",
+								 "Software\Microsoft\Windows\CurrentVersion\RunOnce", "Schtasks.exe", "RegSetValueEx", "powershell -enc",
+								 "URLDownloadToFile", "InternetOpen", "HttpSendRequest", "socket", "CryptEncrypt", "CryptGenKey",
+								 ".locked", ".encrypted", "IsDebuggerPresent", "VMWare", "VirtualBox", "UPX" };
+	insert(trie, checkWords);
+	buildFailLinks(trie);
+}
+
+int getHeuristicScore(const std::filesystem::path& path)
+{
+	int score = 0;
+
+	std::ifstream file(path, std::ios::binary | std::ios::ate);
+	if (!file.is_open()) 
+	{
+		return 0;
+	}
+
+	std::streamsize size = file.tellg();
+	if (size == 0) 
+	{
+		file.close();
+		return 0;
+	}
+	file.seekg(0, std::ios::beg);
+
+	std::vector<char> buffer(size);
+	if (!file.read(buffer.data(), size)) 
+	{
+		file.close();
+		return 0;
+	}
+	file.close();
+
+	std::string fileContent(buffer.begin(), buffer.end());
+
+	if (trie == nullptr) 
+	{
+		throw std::runtime_error("Trie was not initialized");
+	}
+	std::map<std::string, int> matches = search(trie, fileContent);
+
+	if (matches.count("CreateRemoteThread")) score += 40;
+	if (matches.count("WriteProcessMemory")) score += 30;
+	if (matches.count("VirtualAllocEx")) score += 20;
+	if (matches.count("QueueUserAPC")) score += 30;
+
+	if (matches.count("SetWindowsHookEx")) score += 40;
+	if (matches.count("GetAsyncKeyState")) score += 15;
+
+	if (matches.count("LsaGetLogonSessionData")) score += 50;
+	if (matches.count("CryptUnprotectData")) score += 30;
+	if (matches.count("sqlite3_open")) score += 20;
+	if (matches.count("LSASS")) score += 30;
+
+	if (matches.count("Software\\Microsoft\\Windows\\CurrentVersion\\Run")) score += 25;
+	if (matches.count("Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce")) score += 25;
+
+	if (matches.count("powershell -enc")) score += 50;
+	if (matches.count("URLDownloadToFile")) score += 20;
+	if (matches.count("InternetOpen")) score += 5;
+
+	if (matches.count("CryptEncrypt")) score += 15;
+	if (matches.count("CryptGenKey")) score += 15;
+	if (matches.count(".locked")) score += 30;
+
+	if (matches.count("IsDebuggerPresent")) score += 15;
+	if (matches.count("VMWare")) score += 10;
+	if (matches.count("VirtualBox")) score += 10;
+
+	if (matches.count("CreateRemoteThread") &&
+		matches.count("WriteProcessMemory") &&
+		matches.count("VirtualAllocEx")) 
+	{
+		score += 50;
+	}
+
+	return score;
+}

@@ -58,7 +58,7 @@ public:
         }
     }
 
-    bool check(const unsigned char* hash, unsigned int lg)
+    bool check(const unsigned char* hash, unsigned int lg) const
     {
         uint64_t h1 = fnv1a_hash(hash, lg);
         uint64_t h2 = sdbm_hash(hash, lg);

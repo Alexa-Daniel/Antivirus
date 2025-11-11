@@ -13,7 +13,7 @@ class GUI : public QWidget
     Q_OBJECT
 
 public:
-    explicit GUI(QWidget *parent = nullptr);
+    explicit GUI(QWidget* parent = nullptr);
     ~GUI();
 
 private:

@@ -7,17 +7,19 @@
 #include <QFileDialog>
 #include <QMessageBox>
 
-GUI::GUI(QWidget *parent)
-    : QWidget(parent)
+GUI::GUI(QWidget* parent)
+	: QWidget(parent)
 {
-    ui.setupUi(this);
+	ui.setupUi(this);
 
 	setWindowTitle("Antivirus");
 	setWindowIcon(QIcon(":/bug.png"));
 
-    extensions = { ".exe", ".dll", ".js", ".msi", ".bat", ".cmd", ".vbs", ".scr", ".vbs", ".ps1", ".docm", ".xlsm", ".pptm" };
-    bf = new BloomFilter();
-    loadBloomFilter(*bf);
+	extensions = { ".exe", ".dll", ".js", ".msi", ".bat", ".cmd", ".vbs", ".scr", ".vbs", ".ps1", ".docm", ".xlsm", ".pptm", ".txt" };
+	bf = new BloomFilter();
+	loadBloomFilter(*bf);
+
+	initializeTrie();
 
 	threatsFound = 0;
 
@@ -27,7 +29,7 @@ GUI::GUI(QWidget *parent)
 
 GUI::~GUI()
 {
-    delete bf;
+	delete bf;
 }
 
 void GUI::loadBloomFilter(BloomFilter& bf)
@@ -82,7 +84,7 @@ void GUI::scanButtonClick()
 		});
 
 	connect(sw, &ScannerWorker::finishedScan, thread, &QThread::quit);
-	
+
 	connect(thread, &QThread::finished, sw, &ScannerWorker::deleteLater);
 	connect(thread, &QThread::finished, thread, &QThread::deleteLater);
 

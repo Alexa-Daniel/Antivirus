@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QElapsedTimer>
 #include <set>
 #include <string>
 #include "..\Antivirus\Antivirus.h";
@@ -14,6 +15,10 @@ class ScannerWorker : public QObject
 public:
 	explicit ScannerWorker(QObject* parent = nullptr);
 	~ScannerWorker();
+
+private:
+	int filesScanned, malwareFound;
+	QElapsedTimer updateTimer, timer;
 
 public slots:
 	void scan(QString path, std::set<std::string>& extensions, BloomFilter& bf);
