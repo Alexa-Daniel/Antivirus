@@ -19,6 +19,7 @@ using namespace std;
 
 TrieNode* trie = nullptr;
 const unsigned int BIN_HASH_SIZE = 32;
+const std::streamsize HEURISTIC_READ_LIMIT = 1048576;
 
 void loadBloomFilter(BloomFilter& bf)
 {
@@ -67,6 +68,7 @@ vector<uint8_t> createHash(const filesystem::path& file, string& bucketName)
 	BOOL bResult = false;
 	DWORD cbRead = 0;
 	BYTE rgbFile[1024];
+
 	while (bResult = ReadFile(hFile, rgbFile, 1024, &cbRead, NULL))
 	{
 		if (cbRead == 0)
@@ -228,39 +230,41 @@ void initializeTrie()
 	buildFailLinks(trie);
 }
 
-int getHeuristicScore(const std::filesystem::path& path)
+int getHeuristicScore(const filesystem::path& path)
 {
 	int score = 0;
 
-	std::ifstream file(path, std::ios::binary | std::ios::ate);
+	ifstream file(path, ios::binary | ios::ate);
 	if (!file.is_open()) 
 	{
 		return 0;
 	}
 
-	std::streamsize size = file.tellg();
+	streamsize size = file.tellg();
 	if (size == 0) 
 	{
 		file.close();
 		return 0;
 	}
-	file.seekg(0, std::ios::beg);
+	file.seekg(0, ios::beg);
 
-	std::vector<char> buffer(size);
-	if (!file.read(buffer.data(), size)) 
+	streamsize bytesToRead = min(size, HEURISTIC_READ_LIMIT);
+
+	vector<char> buffer(bytesToRead);
+	if (!file.read(buffer.data(), bytesToRead)) 
 	{
 		file.close();
 		return 0;
 	}
 	file.close();
 
-	std::string fileContent(buffer.begin(), buffer.end());
+	string fileContent(buffer.begin(), buffer.end());
 
 	if (trie == nullptr) 
 	{
-		throw std::runtime_error("Trie was not initialized");
+		throw runtime_error("Trie was not initialized");
 	}
-	std::map<std::string, int> matches = search(trie, fileContent);
+	map<string, int> matches = search(trie, fileContent);
 
 	if (matches.count("CreateRemoteThread")) score += 40;
 	if (matches.count("WriteProcessMemory")) score += 30;
@@ -298,4 +302,35 @@ int getHeuristicScore(const std::filesystem::path& path)
 	}
 
 	return score;
+}
+
+bool isFileTrusted(const filesystem::path& filePath) {
+	LONG lStatus;
+	GUID WVTPolicyGUID = WINTRUST_ACTION_GENERIC_VERIFY_V2;
+	WINTRUST_FILE_INFO FileInfo;
+	WINTRUST_DATA WinTrustData;
+
+	memset(&FileInfo, 0, sizeof(FileInfo));
+	FileInfo.cbStruct = sizeof(WINTRUST_FILE_INFO);
+	FileInfo.pcwszFilePath = filePath.c_str();
+	FileInfo.hFile = NULL;
+	FileInfo.pgKnownSubject = NULL;
+
+	memset(&WinTrustData, 0, sizeof(WinTrustData));
+	WinTrustData.cbStruct = sizeof(WINTRUST_DATA);
+	WinTrustData.dwUIChoice = WTD_UI_NONE;
+	WinTrustData.fdwRevocationChecks = WTD_REVOKE_NONE;
+	WinTrustData.dwUnionChoice = WTD_CHOICE_FILE;
+	WinTrustData.pFile = &FileInfo;
+	WinTrustData.dwStateAction = WTD_STATEACTION_VERIFY;
+	WinTrustData.hWVTStateData = NULL;
+	WinTrustData.pwszURLReference = NULL;
+	WinTrustData.dwProvFlags = WTD_SAFER_FLAG;
+
+	lStatus = WinVerifyTrust(NULL, &WVTPolicyGUID, &WinTrustData);
+
+	WinTrustData.dwStateAction = WTD_STATEACTION_CLOSE;
+	WinVerifyTrust(NULL, &WVTPolicyGUID, &WinTrustData);
+
+	return (lStatus == ERROR_SUCCESS);
 }

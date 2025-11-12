@@ -30,6 +30,7 @@ private slots:
     void scanButtonClick();
 
     void addToLog(QString msg);
+    void onUpdateStatus(QString message);
     void foundMalware(QString path);
     void finishedScan();
     //void addToHistory(QString historyEntry);

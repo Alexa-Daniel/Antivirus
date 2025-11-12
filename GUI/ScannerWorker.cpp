@@ -38,7 +38,8 @@ void ScannerWorker::scan(QString path, set<string>& extensions, BloomFilter& bf)
 
 			if (updateTimer.elapsed() > 500)
 			{
-				emit addToLog(QString("Scanned %1 files").arg(filesScanned));
+				emit updateStatus(QString("Scanned %1 files...").arg(filesScanned));
+				//emit addToLog(QString("Scanned %1 files").arg(filesScanned));
 				updateTimer.restart();
 			}
 			try
@@ -50,6 +51,10 @@ void ScannerWorker::scan(QString path, set<string>& extensions, BloomFilter& bf)
 
 					if (extensions.count(ext))
 					{
+						if (isFileTrusted(entry.path()))
+						{
+							continue;
+						}
 						string bucketName;
 						vector<uint8_t> fileHash = createHash(entry.path(), bucketName);
 
@@ -102,7 +107,7 @@ void ScannerWorker::scan(QString path, set<string>& extensions, BloomFilter& bf)
 	QTime time(0, 0, 0);
 	time = time.addMSecs(timeInMs);
 	QString formattedTime = time.toString("hh:mm:ss");
-	emit addToLog(QString("Scanned %1 files. Found %2 threats. Time taken: %3")
+	emit updateStatus(QString("Scanned %1 files. Found %2 threats. Time taken: %3")
 		.arg(filesScanned)
 		.arg(malwareFound)
 		.arg(formattedTime));

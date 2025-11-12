@@ -77,6 +77,7 @@ void GUI::scanButtonClick()
 	connect(sw, &ScannerWorker::addToLog, this, &GUI::addToLog);
 	connect(sw, &ScannerWorker::foundMalware, this, &GUI::foundMalware);
 	connect(sw, &ScannerWorker::finishedScan, this, &GUI::finishedScan);
+	connect(sw, &ScannerWorker::updateStatus, this, &GUI::onUpdateStatus);
 
 	connect(thread, &QThread::started, sw, [=]()
 		{
@@ -133,4 +134,7 @@ void GUI::finishedScan()
 	ui.browseButton->setEnabled(true);
 }
 
-
+void GUI::onUpdateStatus(QString message)
+{
+	ui.statusLabel->setText(message);
+}

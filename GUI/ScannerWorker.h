@@ -28,4 +28,5 @@ signals:
 	void addToLog(QString logMsg);
 	void foundMalware(QString path);
 	void finishedScan();
+	void updateStatus(QString statusMessage);
 };

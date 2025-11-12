@@ -86,6 +86,13 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QLabel" name="statusLabel">
+           <property name="text">
+            <string>Scan not started.</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </widget>
       </item>
