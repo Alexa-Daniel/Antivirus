@@ -5,6 +5,7 @@
 #include <QElapsedTimer>
 #include <set>
 #include <string>
+#include <atomic>
 #include "..\Antivirus\Antivirus.h";
 #include "..\Include\BloomFilter.hpp"
 
@@ -17,7 +18,8 @@ public:
 	~ScannerWorker();
 
 private:
-	int filesScanned, malwareFound;
+	std::atomic<int> filesScanned;
+	std::atomic<int> malwareFound;
 	QElapsedTimer updateTimer, timer;
 
 public slots:
