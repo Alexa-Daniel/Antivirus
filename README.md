@@ -1,6 +1,8 @@
 # Antivirus
 Antivirus is a multithreaded desktop application that provides signature-based and heuristic malware scanning. It utilizes the Windows Crypto API for SHA-256 hashing, a Bloom Filter for rapid hash lookups, and an Aho-Corasick trie to detect suspicious API calls and patterns within file contents. Using the Windows Authenticode API, the scanner automatically identifies and bypasses digitally signed binaries from trusted publishers, improving performance.
 
+The application is still a work in progress and further improvements/features will be added.
+
 # Running the Application Directly
 
 If you prefer to use the application without building it from the source code, you can download the pre-compiled binaries directly:
